@@ -1,0 +1,201 @@
+---
+title: "Aeroplane data work"
+author: "Oyindamola"
+date: '2023-02-21'
+output: html_document
+---
+
+```{r}
+#load the required packages
+library(tidyverse)
+library(dplyr)
+library(readr)
+```
+
+```{r}
+# Question to be treated include
+# 1. What time of the month, of the week, of the day is best to travel,  to avoid delays?
+```
+
+```{r}
+#load dataset
+#set WD
+setwd("C:/Users/hp/Documents/WORK FILE")
+```
+
+```{r}
+D1= read.csv("2008.csv")
+D2 = read.csv("2007.csv")
+```
+
+```{r}
+#Join the dataset
+DD = rbind.data.frame(D1,D2)
+```
+
+```{r}
+str(DD)
+```
+
+```{r}
+# Select variable of interest
+
+working_Data = DD %>% 
+  select(1,2,3,4,5,ArrDelay,DepDelay)
+```
+
+```{r}
+# check for NAs
+working_data_na = colnames(working_Data)[apply(working_Data,2,anyNA)]
+
+View(working_data_na)
+```
+
+```{r}
+# addressing the NAs by replacing them using mean method
+missing_na = apply(working_Data[,colnames(working_Data) %in% working_data_na],2,mean,na.rm = TRUE)
+
+missing_na
+```
+
+```{r}
+# substitution
+working_data_WR = working_Data %>% 
+  mutate(ArrDelay_withoutNA = ifelse(is.na(ArrDelay), missing_na[1], ArrDelay),
+         DepDelay_withoutNA = ifelse(is.na(DepDelay),
+                                     missing_na[2],DepDelay))
+```
+
+```{r}
+# omit NAs
+Omitted_working_data = working_Data %>% na.omit()
+View(Omitted_working_data)
+```
+
+```{r}
+# Best time of month to travel
+# remodify 
+
+Omitted_working_data = Omitted_working_data %>% 
+  mutate(MM = case_when(Month ==1 ~ "Jan",
+                        Month == 1 ~ "Feb",
+                        Month == 3 ~ "Mar",
+                        Month == 4 ~ "Apr",
+                        Month == 5 ~ "May",
+                        Month == 6 ~ "Jun",
+                        Month == 7 ~ "Jul",
+                        Month == 8 ~ "Aug",
+                        Month == 9 ~ "Sep",
+                        Month == 10 ~ "Oct",
+                        Month == 11 ~ "Nov",
+                        Month == 12 ~ "Dec")) %>% 
+  mutate(week_day = case_when(DayOfWeek == 1 ~ "Sunday",
+                              DayOfWeek == 2 ~ "Monday",
+                              DayOfWeek == 3 ~ "Tuesday",
+                              DayOfWeek == 4 ~ "Wednesday",
+                              DayOfWeek == 5 ~ "Thursday",
+                              DayOfWeek == 6 ~ "Friday",
+                              DayOfWeek == 7 ~ "Saturday")) %>%
+  mutate(Time_day =case_when(DepTime < 1200 ~ "AM",
+                             DepTime > 1200 ~ "PM"))
+
+
+View(Omitted_working_data)
+```
+
+```{r}
+# means of delay
+Delays = Omitted_working_data %>% 
+  mutate(Average_delay_time =(ArrDelay + DepDelay)/2)
+View(Delays)
+```
+
+```{r}
+# what time of the month is best to travel
+
+Best_time_month = Delays %>% group_by(MM) %>%
+  summarise(prop_of_delay = n()/nrow(Delays))
+Best_time_month
+                    
+
+```
+
+```{r}
+Best_time_month = Delays %>%
+  group_by(MM) %>% 
+  summarise(Ave_delay_time = sum(Average_delay_time),prop_of_delay = n()/nrow(Delays))
+Best_time_month
+
+Best_time_month
+
+Best_time_month[which.min(Best_time_month$Ave_delay_time),]
+```
+
+```{r}
+# Question No2: What time of the week is best to travel
+
+Best_time_week = Delays %>%
+  group_by(week_day) %>% 
+  summarise(Ave_delay_time = sum(Average_delay_time),prop_of_delay = n()/nrow(Delays))
+Best_time_week
+
+Best_time_week
+
+Best_time_week[which.min(Best_time_week$Ave_delay_time),]
+```
+
+```{r}
+
+```
+
+
+```{r}
+# Question 3: What time of the day is best to travel
+
+Best_time_day = Delays %>%
+  na.omit() %>% 
+  group_by(Time_day) %>% 
+  summarise(Ave_delay_time = sum(Average_delay_time),prop_of_delay = n()/nrow(Delays))
+Best_time_day
+
+Best_time_day[which.min(Best_time_day$Ave_delay_time),]
+```
+
+
+```{r}
+# visualization: best time month
+
+ggplot(data = Best_time_month,aes(x = reorder(prop_of_delay,MM),y =prop_of_delay, fill = MM))+
+  geom_bar(stat = "identity")
+```
+
+```{r}
+ggplot(data = Best_time_week, aes(x=reorder(week_day,prop_of_delay), y=prop_of_delay,shape = week_day)) + geom_point()
+```
+
+```{r}
+ggplot(data = Best_time_day, aes(x=Time_day, y=prop_of_delay,fill = Time_day)) + geom_bar(stat = "identity") #+ ylim(c(0.4,0.7))
+  #geom_point()+ ylim(c(0.4,0.7))
+```
+
+```{r}
+ggplot(data = Best_time_day, aes(x=Time_day, y=prop_of_delay,fill = Time_day)) + geom_bar(stat = "identity") + ggtitle(label = "Best time of the day to travel")
+```
+
+```{r}
+ggplot(data = Best_time_day, aes(x=Time_day, y=prop_of_delay,fill = Time_day)) + geom_bar(stat = "identity") + ggtitle(label = "Best time of the day to travel")+ xlab("Time of the day") + ylab("Proportion")
+```
+
+```{r}
+ggplot(data = Best_time_day, aes(x=Time_day, y=prop_of_delay,fill = Time_day)) + geom_bar(stat = "identity") + ggtitle(label = "Best time of the day to travel")+ xlab("Time of the day") + ylab("Proportion")+ geom_text(aes(label=prop_of_delay))
+```
+
+```{r}
+# Round the value on chart
+ggplot(data = Best_time_day, aes(x=Time_day, y=prop_of_delay,fill = Time_day)) + geom_bar(stat = "identity") + ggtitle(label = "Best time of the day to travel")+ xlab("Time of the day") + ylab("Proportion")+ geom_text(aes(label= round(prop_of_delay,2)),vjust = -0.4)
+```
+
+
+
+
+
